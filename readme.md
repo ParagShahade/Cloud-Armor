@@ -55,7 +55,6 @@ terraform apply -auto-approve
 ### Security Policy
 - **Rules to deny**
   - Traffic from Russia (`RU`)
-  - Traffic from all regions except Germany (`DE`)
   - Common web attacks (**SQL Injection, XSS, LFI, RFI, RCE, etc.**)
   - Specific IP range: `192.168.100.0/24`
 - **Default rule to allow all other traffic**

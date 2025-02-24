@@ -78,13 +78,7 @@ resource "google_compute_security_policy" "cloud_armor_policy_waf" {
         expression  = "origin.region_code == 'RU'"
         action      = "deny(403)"
       },
-      #Deny Traffic from All Other Regions (Allow Only DE)
-      {
-        description = "Deny traffic from all regions except germany DE"
-        priority    = 800
-        expression  = "origin.region_code != 'DE'"
-        action      = "deny(403)"
-      },
+
       #Modsecurity
       {
         description = "SQL Injection protection"
