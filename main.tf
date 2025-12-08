@@ -71,14 +71,25 @@ resource "google_compute_security_policy" "cloud_armor_policy_waf" {
   dynamic "rule" {
 
     for_each = [
-      #Deny Traffic from the RU Region (russia)
+      # CVE-2025-55182 protection
       {
-        description = "Deny traffic from RU russia region"
-        priority    = 700
-        expression  = "origin.region_code == 'RU'"
+        description = "CVE-2025-55182 protection using cve-canary"
+        priority    = 999
+        expression  = <<-EOT
+          (has(request.headers['next-action']) ||
+           has(request.headers['rsc-action-id']) ||
+           request.headers['content-type'].contains('multipart/form-data') ||
+           request.headers['content-type'].contains('application/x-www-form-urlencoded'))
+           && evaluatePreconfiguredWaf('cve-canary',{
+             'sensitivity': 0,
+             'opt_in_rule_ids': [
+               'google-mrs-v202512-id000001-rce',
+               'google-mrs-v202512-id000002-rce'
+             ]
+           })
+        EOT
         action      = "deny(403)"
       },
-
       #Modsecurity
       {
         description = "SQL Injection protection"
