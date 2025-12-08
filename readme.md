@@ -1,4 +1,4 @@
-# Cloud Armor WAF Example
+# Cloud Armor WAF
 
 Terraform configuration that provisions a Google Cloud Armor security policy (focused on the CVE-2025-55182 canary rule), a backend service, and a health check. Required APIs are enabled automatically.
 
