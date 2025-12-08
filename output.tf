@@ -1,8 +1,3 @@
-# Export the service account email
-output "service_account_email" {
-  value = google_service_account.cloud_armor_service_account.email
-}
-
 output "backend_service_name" {
   value = google_compute_backend_service.backend_service_waf.name
 }

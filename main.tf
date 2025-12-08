@@ -1,75 +1,11 @@
 
-locals {
-
-  # Roles to be assigned to the Cloud Armor Service Account at the Project level
-  ca_sa_project_roles = [
-    "roles/iam.serviceAccountAdmin",
-    "roles/compute.securityAdmin",
-    "roles/resourcemanager.projectIamAdmin",
-    "roles/serviceusage.serviceUsageAdmin",
-
-    # Additional roles depending on your needs
-    # "roles/bigquery.admin",
-    # "roles/aiplatform.admin",
-    # "roles/compute.admin",
-  ]
-}
-
-data "google_project" "project" {
-  project_id = var.project_id
-}
-
-# Enable APIs
-resource "google_project_service" "apis" {
-  for_each = toset([
-    "cloudresourcemanager.googleapis.com",
-    "compute.googleapis.com",
-    "iam.googleapis.com",
-    "iamcredentials.googleapis.com",
-    "sts.googleapis.com"
-  ])
-  service = each.value
-  project = var.project_id
-}
-
-# Create Service Account to be used by the Cloud Armor
-resource "google_service_account" "cloud_armor_service_account" {
-  project      = var.project_id
-  account_id   = "sa-cloud-armor-waf"
-  display_name = "Service Account for cloud-armor"
-  description  = "Service Account for cloud-armor"
-}
-
-# Grant the Service Account roles at the project level
-resource "google_project_iam_member" "ca_service_account_project_roles" {
-  for_each = { for role in local.ca_sa_project_roles : role => role }
-
-  project = var.project_id
-  role    = each.key
-  member  = "serviceAccount:${google_service_account.cloud_armor_service_account.email}"
-}
-
-# Create the health check for the backend service
-resource "google_compute_health_check" "waf_hck" {
-  project = var.project_id
-
-  name = "waf-health-check"
-
-  http_health_check {
-    request_path = "/"
-    port         = 80
-  }
-}
-
-# Create the Cloud Armor security policy
-
+# Cloud Armor security policy
 resource "google_compute_security_policy" "cloud_armor_policy_waf" {
   name        = "cloud-armor-waf-policy"
   description = "Cloud Armor security policy with WAF rules"
   project     = var.project_id
 
   dynamic "rule" {
-
     for_each = [
       # CVE-2025-55182 protection
       {
@@ -90,7 +26,7 @@ resource "google_compute_security_policy" "cloud_armor_policy_waf" {
         EOT
         action      = "deny(403)"
       },
-      #Modsecurity
+      # Modsecurity
       {
         description = "SQL Injection protection"
         priority    = 1000
@@ -164,6 +100,7 @@ resource "google_compute_security_policy" "cloud_armor_policy_waf" {
         action      = "deny(403)"
       }
     ]
+
     content {
       description = rule.value.description
       priority    = rule.value.priority
@@ -175,7 +112,8 @@ resource "google_compute_security_policy" "cloud_armor_policy_waf" {
       action = rule.value.action
     }
   }
-  #IP-based rule for blocking specific IP range
+
+  # IP-based rule for blocking specific IP range
   rule {
     description = "Block 192.168.100.0/24"
     priority    = 500
@@ -187,7 +125,8 @@ resource "google_compute_security_policy" "cloud_armor_policy_waf" {
     }
     action = "deny(403)"
   }
-  #Sets up a Cloud Armor security policy along with DDoS protection enabled by default
+
+  # Sets up a Cloud Armor security policy along with DDoS protection enabled by default
   adaptive_protection_config {
     layer_7_ddos_defense_config {
       enable = true
@@ -206,24 +145,4 @@ resource "google_compute_security_policy" "cloud_armor_policy_waf" {
     }
     action = "allow"
   }
-}
-
-# Create the backend service with the attached security policy
-resource "google_compute_backend_service" "backend_service_waf" {
-  project = var.project_id
-
-  name        = "waf-backend-service"
-  description = "Backend service for Cloud Armor example"
-
-  health_checks   = [google_compute_health_check.waf_hck.self_link]
-  security_policy = google_compute_security_policy.cloud_armor_policy_waf.id
-}
-
-# Grant the Service Account access to the security policy
-resource "google_project_iam_binding" "cloud_security_iam_binding" {
-  project = var.project_id
-  role    = "roles/compute.securityAdmin"
-  members = [
-    "serviceAccount:${google_service_account.cloud_armor_service_account.email}"
-  ]
 }

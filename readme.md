@@ -1,80 +1,47 @@
-# Cloud Armor Security Policy Terraform Configuration
+# Cloud Armor WAF Example
 
-## Overview
-This Terraform module sets up **Google Cloud Armor** security policies to protect your infrastructure from common web application attacks, such as **SQL Injection, XSS, and DDoS attacks**. It also configures a **backend service, health check, and IAM roles** for managing security policies.
+Terraform configuration that provisions a Google Cloud Armor security policy (focused on the CVE-2025-55182 canary rule), a backend service, and a health check. Required APIs are enabled automatically.
 
-## Features
-- **Cloud Armor Security Policy** with predefined **Web Application Firewall (WAF) rules**
-- **Region-based traffic filtering** (e.g., allowing only traffic from Germany and blocking other regions)
-- **IP-based blocking** for specific IP ranges
-- **DDoS protection** enabled by default
-- **Service Account** with necessary IAM roles to manage security policies
-- **Backend service** attached to the security policy
-- **Health check** configuration for backend service
-- **Required APIs** enabled automatically
+## Prerequisites
+- Terraform >= 1.5.0
+- Google Cloud project with billing enabled
+- Credentials (ADC or service account key) with permissions to create the listed resources
 
-## Requirements
-- Terraform v1.0+
-- Google Cloud Platform (GCP) Project
-- Permissions to create IAM roles, service accounts, and security policies
+## Configuration
+Variables (defaults are set in `variable.tf`):
+- `project_id` — target GCP project
+- `region` — default region for regional resources (default: `europe-west1`)
+
 
 ## Usage
-### 1. Set up Terraform Variables
-Update the following variables in your Terraform configuration:
-```hcl
-variable "project_id" {
-  description = "The GCP Project ID"
-  type        = string
-}
-```
-
-### 2. Initialize and Apply Terraform
-Run the following commands:
-```sh
+```bash
 terraform init
 terraform plan
-terraform apply -auto-approve
+terraform apply
 ```
+
+## Files
+- `provider.tf` — provider config and versions
+- `variable.tf` — project_id, region
+- `apis.tf` — required API enablement
+- `data.tf` — project data source
+- `backend.tf` — health check and backend service
+- `main.tf` — Cloud Armor security policy (CVE-2025-55182 rule, IP block, default allow)
+- `locals.tf` — (currently unused placeholder)
+- `output.tf` — key outputs (backend service, policy names)
 
 ## Resources Created
-### Service Account
-- **sa-cloud-armor-waf**: Used for managing Cloud Armor policies
-- Assigned IAM roles:
-  - `roles/iam.serviceAccountAdmin`
-  - `roles/compute.securityAdmin`
-  - `roles/resourcemanager.projectIamAdmin`
-  - `roles/serviceusage.serviceUsageAdmin`
-
-### APIs Enabled
-- Cloud Resource Manager API
-- Compute Engine API
-- IAM API
-- IAM Credentials API
-- Security Token Service API
-
-### Security Policy
-- **Rules to deny**
-  - Traffic from Russia (`RU`)
-  - Common web attacks (**SQL Injection, XSS, LFI, RFI, RCE, etc.**)
-  - Specific IP range: `192.168.100.0/24`
-- **Default rule to allow all other traffic**
-- **Adaptive DDoS protection enabled**
-
-### Backend Service
-- **Backend Service**: `waf-backend-service`
-- **Health Check**: `/` on port `80`
-- **Attached Security Policy**: `cloud-armor-waf-policy`
-
-## Notes
-- Modify the security rules as per your organizational requirements.
-- Ensure the service account has the necessary permissions to manage security policies.
-- Review firewall rules to ensure Cloud Armor functions correctly.
+- Cloud Armor security policy `cloud-armor-waf-policy`
+  - Deny rule using `evaluatePreconfiguredWaf('cve-canary')` for CVE-2025-55182
+  - IP deny rule for `192.168.100.0/24`
+  - Default allow rule
+  - Adaptive L7 DDoS protection enabled
+- Backend service `waf-backend-service` with attached policy
+- HTTP health check on `/` port `80`
+- Required Google APIs enabled for the project
 
 ## Cleanup
-To remove all resources created by this module, run:
-```sh
-terraform destroy -auto-approve
+```bash
+terraform destroy
 ```
----
-**Author**: Parag Shahade  
 

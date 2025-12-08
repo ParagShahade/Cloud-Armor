@@ -1,8 +1,10 @@
 variable "project_id" {
-
-  default = "YOUR_PROJECT_ID"
+  description = "GCP project ID where resources will be created."
+  type        = string
 }
 
 variable "region" {
-  default = "YOUR_REGION"
+  description = "Default region for regional resources."
+  type        = string
+  default     = "europe-west1"
 }
